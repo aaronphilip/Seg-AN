@@ -1,2 +1,2 @@
-# Seg-GAN
-An algorithm to adversarially train a segmentation model
+# Seg-AN
+An adversarial network that trains a segmentation model

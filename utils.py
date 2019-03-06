@@ -6,6 +6,14 @@ import torchvision.datasets as datasets
 import torch
 
 def preprocess_img(img_path):
+    """Normalizes an image for passing through a pretrained network
+    Args:
+        img_path (str): path to the image file
+        
+    Returns:
+        img (numpy array): an image converted to a numpy array
+        img_arr (Tensor): normalized image Tensor
+    """
     img = Image.open(img_path).resize((224,224))
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                          std=[0.229, 0.224, 0.225])
@@ -15,7 +23,13 @@ def preprocess_img(img_path):
     return img, img_arr
 
 def dataloader():
+    """Data loader for loading images and labels
     
+    https://github.com/pytorch/examples/tree/master/imagenet
+    
+    Returns:
+        data_loader (DataLoader): a PyTorch DataLoader to load in imagenet
+    """
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
     

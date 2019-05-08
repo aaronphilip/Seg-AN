@@ -22,18 +22,19 @@ def preprocess_img(img_path):
     
     return img, img_arr
 
-def dataloader():
+def dataloader(traindir):
     """Data loader for loading images and labels
     
     https://github.com/pytorch/examples/tree/master/imagenet
+    
+    Args:
+        traindir (str): path to the training set directory
     
     Returns:
         data_loader (DataLoader): a PyTorch DataLoader to load in imagenet
     """
     normalize = transforms.Normalize(mean=[0.485, 0.456, 0.406],
                                      std=[0.229, 0.224, 0.225])
-    
-    traindir = "tiny-imagenet-200/train"
 
     train_dataset = datasets.ImageFolder(
         traindir,

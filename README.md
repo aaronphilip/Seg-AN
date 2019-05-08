@@ -1,3 +1,3 @@
 # Seg-AN
 
-Train the network by running `$ python train.py`.
+Train the network by running `$ python train.py`

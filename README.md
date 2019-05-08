@@ -1,2 +1,3 @@
 # Seg-AN
-An adversarial network that trains a segmentation model
+
+Train the network by running `$ python train.py`.

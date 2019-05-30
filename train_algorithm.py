@@ -1,65 +1,66 @@
 import torch
 from utils import dataloader 
-from visualizations import * 
+from visualizations import *
 
-def train(classifier, segmenter, traindir, epochs=10):
-    """Adversairially trains a segmentation model against a classifier
-    
-    Args:
-        classifier (VGG16): a vgg-16 CNN
-        segmentor (UNet): a unet segmentation model
-        epochs (int): number of epochs to train
-        
-    Returns:
-        classifier (VGG16): the trained classifier
-        segmenter (UNet): the trained segmenter
-    """
-    
-    data_loader = dataloader(traindir)
+class_dict = {1:"airplane", 2:"bicycle", 3:"bird", 
+              4:"boat", 5:"bottle", 6:"bus",
+             7:"car", 8:"cat", 9:"chair",
+             10:"cow", 11: "dining table", 12: "dog",
+             13: "horse", 14:"motorbike", 15:"person",
+             16: "potted plant", 17:"sheep", 18:"sofa",
+             19:"train", 20:"tv/monitor"}
+
+def train(classifier, segmenter, epochs=10):
+    data_loader = dataloader()
     loss = torch.nn.CrossEntropyLoss()
     gen_opt = torch.optim.Adam(segmenter.parameters())
     clas_opt = torch.optim.Adam(classifier.parameters())
 
     for i in range(epochs):
-        for j, (imgs, lbls) in enumerate(data_loader):
+        for j, (imgs, ground_truths) in enumerate(data_loader):
             
+            max = 0
+            lbls = []
+            for k in range(len(ground_truths)):
+                lbl = ground_truths[k]
+                classes, mask = torch.unique(lbl, return_inverse=True)
+                classes *= 255
+
+                for l in range(len(classes)):
+                    if classes[l] != 0 and classes[l] != 255 and torch.sum(mask == l) > max:
+                        max = l
+                        
+                lbls.append(classes[max])
+               
             imgs = imgs.cuda()
-            lbls = lbls.cuda()
-            
-            #get the Grad-Cam and Guided BP for the batch of images
+            lbls = torch.from_numpy(np.array(lbls)).long().cuda() - 1
+
             gc = grad_cam(classifier, imgs)
             gbp = guided_bp(classifier, imgs)
             
             seg_input = torch.cat((imgs, gc, gbp), 1).cuda()
             
-            #Get output masks for correct class
-            seg_output = segmenter(seg_input)[:,lbls,:,:]
-            
-            #Flip the mask so that background is segmented
+            seg_output = segmenter(seg_input)[:,lbls[0],:,:]
             masks = (seg_output < 0.9).type(torch.cuda.FloatTensor)
             
             seg_imgs = []
             
-            #Extract segmented background
             for k in range(imgs.shape[0]):
                 seg_imgs.append(imgs[k] * masks[k,k])
-            seg_imgs = torch.stack(seg_imgs)
             
-            #segmenter wants to maximize classifier loss after removing the target object
+            seg_imgs = torch.stack(seg_imgs)
             s_loss = -loss(classifier(seg_imgs), lbls)
             
             gen_opt.zero_grad()
             s_loss.backward()
             gen_opt.step()
-            
-            #Classifier wants to minimize loss on original images and segmented images
             c_loss = loss(classifier(imgs), lbls) + loss(classifier(seg_imgs), lbls)
             
             clas_opt.zero_grad()
             c_loss.backward()
             clas_opt.step()
             
-            if j % 10 == 0:
+            if j % 20 == 0:
                 print("Epoch {} Iter {} - Segmentation Loss: {}     Classificaton Loss: {}".format(i, j, s_loss*-1, c_loss))
-            
+                
     return classifier, segmenter
